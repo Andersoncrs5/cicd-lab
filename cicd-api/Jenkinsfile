@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'Node22'
+    }
+
+    stages {
+        stage('Verificar ambiente') {
+            steps {
+                dir('cicd-api') {
+                    sh '''
+                        set -eu
+                        echo "Node.js:"
+                        node --version
+
+                        echo "npm:"
+                        npm --version
+                    '''
+                }
+            }
+        }
+
+        stage('Instalar dependências') {
+            steps {
+                dir('cicd-api') {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Validar sintaxe JavaScript') {
+            steps {
+                dir('cicd-api') {
+                    sh '''
+                        set -eu
+
+                        node --check src/server.js
+                        node --check src/models/models.js
+                        node --check src/docs/swagger.js
+
+                        echo "Sintaxe JavaScript validada."
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI concluído com sucesso!'
+        }
+
+        failure {
+            echo 'CI falhou. Consulte o Console Output.'
+        }
+    }
+}
