@@ -1,5 +1,11 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yamlFile 'k8s/jenkins/node-agent.yaml'
+            defaultContainer 'node'
+            retries 1
+        }
+    }
 
     tools {
         nodejs 'node-20'
