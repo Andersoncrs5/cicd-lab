@@ -70,7 +70,14 @@ pipeline {
         stage('Test') {
             steps {
                 dir(env.APP_DIR) {
-                    sh 'npm test --if-present'
+                    sh 'mkdir -p reports && npm run test:ci'
+                }
+            }
+            post {
+                always {
+                    dir(env.APP_DIR) {
+                        junit allowEmptyResults: true, testResults: 'reports/junit.xml'
+                    }
                 }
             }
         }
