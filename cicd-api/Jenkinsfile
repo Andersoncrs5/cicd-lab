@@ -86,16 +86,47 @@ pipeline {
             }
         }
 
-        stage('Build image') {
+        stage('Build and Push Image') {
             steps {
-                container(name: 'kaniko', shell: '/busybox/sh') {
-                    sh '''
-                        /kaniko/executor \
-                            --context "dir://${WORKSPACE}/${APP_DIR}" \
-                            --dockerfile "${WORKSPACE}/${APP_DIR}/Dockerfile" \
-                            --destination "${IMAGE_NAME}:${BUILD_NUMBER}" \
-                            --no-push
-                    '''
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKERHUB_USER',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
+                    container(name: 'kaniko', shell: '/busybox/sh') {
+                        sh '''
+                            set -eu
+                            set +x
+
+                            DOCKERHUB_NAMESPACE="$(
+                                printf '%s' "$DOCKERHUB_USER" |
+                                tr '[:upper:]' '[:lower:]'
+                            )"
+
+                            IMAGE="docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}"
+
+                            echo "Autenticando no Docker Hub..."
+
+                            printf '%s' "$DOCKERHUB_TOKEN" |
+                                /kaniko/executor login docker.io \
+                                    --username "$DOCKERHUB_USER" \
+                                    --password-stdin
+
+                            echo "Construindo e publicando a imagem..."
+
+                            /kaniko/executor \
+                                --context "dir://${WORKSPACE}/${APP_DIR}" \
+                                --dockerfile "${WORKSPACE}/${APP_DIR}/Dockerfile" \
+                                --destination "${IMAGE}:${BUILD_NUMBER}" \
+                                --destination "${IMAGE}:latest"
+
+                            echo "Imagem publicada:"
+                            echo "${IMAGE}:${BUILD_NUMBER}"
+                            echo "${IMAGE}:latest"
+                        '''
+                    }
                 }
             }
         }
