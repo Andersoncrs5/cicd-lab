@@ -875,4 +875,65 @@ swaggerSpec.paths["/health/ready"] = {
   },
 };
 
+swaggerSpec.paths["/health/runtime"] = {
+  get: {
+    tags: ["Health"],
+    summary: "Get Node.js runtime diagnostics",
+    description:
+      "Returns process uptime, Node.js version, platform, and memory usage.",
+    responses: {
+      200: {
+        description: "Runtime information retrieved successfully",
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                status: {
+                  type: "string",
+                  example: "UP",
+                },
+                uptimeSeconds: {
+                  type: "integer",
+                  example: 3600,
+                },
+                runtime: {
+                  type: "object",
+                  properties: {
+                    nodeVersion: {
+                      type: "string",
+                      example: "v22.0.0",
+                    },
+                    platform: {
+                      type: "string",
+                      example: "linux",
+                    },
+                  },
+                },
+                memory: {
+                  type: "object",
+                  properties: {
+                    rssBytes: {
+                      type: "integer",
+                      example: 85000000,
+                    },
+                    heapUsedBytes: {
+                      type: "integer",
+                      example: 18000000,
+                    },
+                    heapTotalBytes: {
+                      type: "integer",
+                      example: 30000000,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
 module.exports = swaggerSpec;

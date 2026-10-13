@@ -69,6 +69,24 @@ app.get("/health/database", async (req, res) => {
   }
 });
 
+app.get("/health/runtime", (req, res) => {
+  const memory = process.memoryUsage();
+
+  res.status(200).json({
+    status: "UP",
+    uptimeSeconds: Math.floor(process.uptime()),
+    runtime: {
+      nodeVersion: process.version,
+      platform: process.platform,
+    },
+    memory: {
+      rssBytes: memory.rss,
+      heapUsedBytes: memory.heapUsed,
+      heapTotalBytes: memory.heapTotal,
+    },
+  });
+});
+
 // CRUD reutilizável para os models
 function createCrudRoutes(Model) {
   const router = express.Router();
