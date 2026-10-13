@@ -33,6 +33,12 @@ pipeline {
             }
         }
 
+        stage('Check Branch') {
+            steps {
+                echo "Branch : ${env.GIT_BRANCH}"
+            }
+        }
+
         stage('Install') {
             steps {
                 dir(env.APP_DIR) {
