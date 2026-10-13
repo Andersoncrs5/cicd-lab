@@ -87,6 +87,50 @@ app.get("/health/runtime", (req, res) => {
   });
 });
 
+app.get("/health/dependencies", async (req, res) => {
+  const dependencies = {};
+
+  try {
+    if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
+      dependencies.mongodb = {
+        status: "DOWN",
+      };
+    } else {
+      const startedAt = Date.now();
+
+      await mongoose.connection.db.admin().ping();
+
+      dependencies.mongodb = {
+        status: "UP",
+        latencyMs: Date.now() - startedAt,
+      };
+    }
+
+    const allHealthy = Object.values(dependencies).every(
+      (dependency) => dependency.status === "UP",
+    );
+
+    return res.status(allHealthy ? 200 : 503).json({
+      status: allHealthy ? "UP" : "DEGRADED",
+      dependencies,
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Dependencies health check failed:", error.message);
+
+    return res.status(503).json({
+      status: "DEGRADED",
+      dependencies: {
+        ...dependencies,
+        mongodb: {
+          status: "DOWN",
+        },
+      },
+      checkedAt: new Date().toISOString(),
+    });
+  }
+});
+
 // CRUD reutilizável para os models
 function createCrudRoutes(Model) {
   const router = express.Router();
