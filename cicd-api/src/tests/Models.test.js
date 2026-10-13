@@ -2,7 +2,7 @@ const { describe, it, after } = require("node:test");
 const assert = require("node:assert/strict");
 const mongoose = require("mongoose");
 
-const { User, Post, Category, Comment } = require("../models/models");
+const { User, Post, Category, Comment, PostLike } = require("../models/models");
 
 const newId = () => new mongoose.Types.ObjectId();
 
