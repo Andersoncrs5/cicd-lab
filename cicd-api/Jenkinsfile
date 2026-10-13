@@ -2,45 +2,79 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'Node22'
+        nodejs 'node-20'
+    }
+
+    options {
+        timestamps()
+        timeout(time: 15, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    environment {
+        APP_DIR = 'cicd-api'
+        CI = 'true'
+        NPM_CONFIG_CACHE = "${WORKSPACE}/.npm"
     }
 
     stages {
-        stage('Verificar ambiente') {
+        stage('Checkout') {
             steps {
-                dir('cicd-api') {
-                    sh '''
-                        set -eu
-                        echo "Node.js:"
-                        node --version
+                checkout scm
+            }
+        }
 
-                        echo "npm:"
-                        npm --version
-                    '''
+        stage('Info') {
+            steps {
+                dir(env.APP_DIR) {
+                    sh 'node --version && npm --version'
                 }
             }
         }
 
-        stage('Instalar dependências') {
+        stage('Install') {
             steps {
-                dir('cicd-api') {
+                dir(env.APP_DIR) {
                     sh 'npm ci'
                 }
             }
         }
 
-        stage('Validar sintaxe JavaScript') {
+        stage('Lint') {
             steps {
-                dir('cicd-api') {
-                    sh '''
-                        set -eu
+                dir(env.APP_DIR) {
+                    sh 'npm run lint --if-present'
+                }
+            }
+        }
 
+        stage('Syntax check') {
+            steps {
+                dir(env.APP_DIR) {
+                    sh '''
                         node --check src/server.js
                         node --check src/models/models.js
                         node --check src/docs/swagger.js
-
-                        echo "Sintaxe JavaScript validada."
                     '''
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir(env.APP_DIR) {
+                    sh 'npm test --if-present'
+                }
+            }
+        }
+
+        stage('Security audit') {
+            steps {
+                dir(env.APP_DIR) {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                        sh 'npm audit --omit=dev --audit-level=high'
+                    }
                 }
             }
         }
@@ -48,11 +82,13 @@ pipeline {
 
     post {
         success {
-            echo 'CI concluído com sucesso!'
+            echo 'Pipeline concluído com sucesso.'
         }
-
         failure {
-            echo 'CI falhou. Consulte o Console Output.'
+            echo 'Pipeline falhou. Verifique os logs do stage com erro.'
+        }
+        cleanup {
+            cleanWs()
         }
     }
 }
