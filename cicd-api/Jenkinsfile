@@ -9,14 +9,16 @@ pipeline {
 
     options {
         timestamps()
-        timeout(time: 15, unit: 'MINUTES')
+        // Build + download da base de dados do Trivy + scan levam mais tempo
+        timeout(time: 30, unit: 'MINUTES')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     environment {
         APP_DIR = 'cicd-api'
-        IMAGE_NAME = 'cicd-api'
+        // Repositório da imagem definido em um só lugar (usado pelo Kaniko e pelo Trivy)
+        IMAGE_REPO = 'docker.io/andersoncrms/cicd-api'
         CI = 'true'
         NPM_CONFIG_CACHE = "${WORKSPACE}/.npm"
     }
@@ -103,9 +105,6 @@ pipeline {
                             USER_CLEAN="$(printf '%s' "$DOCKERHUB_USER" | tr -d '[:space:]')"
                             TOKEN_CLEAN="$(printf '%s' "$DOCKERHUB_TOKEN" | tr -d '[:space:]')"
 
-                            DOCKERHUB_NAMESPACE="$(printf '%s' "$USER_CLEAN" | tr '[:upper:]' '[:lower:]')"
-                            IMAGE="docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}"
-
                             AUTH="$(printf '%s:%s' "$USER_CLEAN" "$TOKEN_CLEAN" | base64 | tr -d '\\n')"
 
                             echo "Gerando credenciais do Docker Hub para o Kaniko..."
@@ -118,13 +117,48 @@ pipeline {
                             /kaniko/executor \
                                 --context "dir://${WORKSPACE}/${APP_DIR}" \
                                 --dockerfile "${WORKSPACE}/${APP_DIR}/Dockerfile" \
-                                --destination "${IMAGE}:${BUILD_NUMBER}" \
-                                --destination "${IMAGE}:latest"
+                                --destination "${IMAGE_REPO}:${BUILD_NUMBER}" \
+                                --destination "${IMAGE_REPO}:latest"
 
                             echo "Imagem publicada:"
-                            echo "${IMAGE}:${BUILD_NUMBER}"
-                            echo "${IMAGE}:latest"
+                            echo "${IMAGE_REPO}:${BUILD_NUMBER}"
+                            echo "${IMAGE_REPO}:latest"
                         '''
+                    }
+                }
+            }
+        }
+
+        stage('Scan image with Trivy') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'dockerhub-creds',
+                            usernameVariable: 'DOCKERHUB_USER',
+                            passwordVariable: 'DOCKERHUB_TOKEN'
+                        )
+                    ]) {
+                        container(name: 'trivy', shell: '/bin/sh') {
+                            sh '''
+                                set -eu
+                                set +x
+
+                                export TRIVY_USERNAME="$DOCKERHUB_USER"
+                                export TRIVY_PASSWORD="$DOCKERHUB_TOKEN"
+
+                                echo "Analisando imagem: ${IMAGE_REPO}:${BUILD_NUMBER}"
+
+                                trivy image \
+                                    --scanners vuln \
+                                    --severity HIGH,CRITICAL \
+                                    --ignore-unfixed \
+                                    --exit-code 1 \
+                                    --timeout 10m \
+                                    --no-progress \
+                                    "${IMAGE_REPO}:${BUILD_NUMBER}"
+                            '''
+                        }
                     }
                 }
             }
