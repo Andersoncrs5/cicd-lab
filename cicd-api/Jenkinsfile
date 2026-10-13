@@ -7,10 +7,6 @@ pipeline {
         }
     }
 
-    tools {
-        nodejs 'node-20'
-    }
-
     options {
         timestamps()
         timeout(time: 15, unit: 'MINUTES')
@@ -20,28 +16,20 @@ pipeline {
 
     environment {
         APP_DIR = 'cicd-api'
+        IMAGE_NAME = 'cicd-api'
         CI = 'true'
         NPM_CONFIG_CACHE = "${WORKSPACE}/.npm"
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+        // O checkout do repositório já é feito automaticamente pelo Declarative Pipeline
 
         stage('Info') {
             steps {
                 dir(env.APP_DIR) {
                     sh 'node --version && npm --version'
                 }
-            }
-        }
-
-        stage('Check Branch') {
-            steps {
-                echo "Branch : ${env.GIT_BRANCH}"
+                echo "Branch: ${env.GIT_BRANCH}"
             }
         }
 
@@ -97,6 +85,20 @@ pipeline {
                 }
             }
         }
+
+        stage('Build image') {
+            steps {
+                container(name: 'kaniko', shell: '/busybox/sh') {
+                    sh '''
+                        /kaniko/executor \
+                            --context "dir://${WORKSPACE}/${APP_DIR}" \
+                            --dockerfile "${WORKSPACE}/${APP_DIR}/Dockerfile" \
+                            --destination "${IMAGE_NAME}:${BUILD_NUMBER}" \
+                            --no-push
+                    '''
+                }
+            }
+        }
     }
 
     post {
@@ -106,8 +108,6 @@ pipeline {
         failure {
             echo 'Pipeline falhou. Verifique os logs do stage com erro.'
         }
-        cleanup {
-            cleanWs()
-        }
+        // Sem cleanWs(): o pod do agente é descartado ao fim do build
     }
 }
