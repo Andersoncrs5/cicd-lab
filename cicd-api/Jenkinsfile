@@ -100,19 +100,18 @@ pipeline {
                             set -eu
                             set +x
 
-                            DOCKERHUB_NAMESPACE="$(
-                                printf '%s' "$DOCKERHUB_USER" |
-                                tr '[:upper:]' '[:lower:]'
-                            )"
+                            USER_CLEAN="$(printf '%s' "$DOCKERHUB_USER" | tr -d '[:space:]')"
+                            TOKEN_CLEAN="$(printf '%s' "$DOCKERHUB_TOKEN" | tr -d '[:space:]')"
 
+                            DOCKERHUB_NAMESPACE="$(printf '%s' "$USER_CLEAN" | tr '[:upper:]' '[:lower:]')"
                             IMAGE="docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}"
 
-                            echo "Autenticando no Docker Hub..."
+                            AUTH="$(printf '%s:%s' "$USER_CLEAN" "$TOKEN_CLEAN" | base64 | tr -d '\\n')"
 
-                            printf '%s' "$DOCKERHUB_TOKEN" |
-                                /kaniko/executor login docker.io \
-                                    --username "$DOCKERHUB_USER" \
-                                    --password-stdin
+                            echo "Gerando credenciais do Docker Hub para o Kaniko..."
+                            mkdir -p /kaniko/.docker
+                            printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' "$AUTH" > /kaniko/.docker/config.json
+                            chmod 600 /kaniko/.docker/config.json
 
                             echo "Construindo e publicando a imagem..."
 
