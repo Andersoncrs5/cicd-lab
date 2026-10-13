@@ -4,7 +4,7 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./docs/swagger");
 require("dotenv").config();
 
-const { User, Post, Category, Comment } = require("./models/models");
+const { User, Post, Category, Comment, PostLike } = require("./models/models");
 
 const app = express();
 
@@ -151,6 +151,7 @@ app.use("/users", createCrudRoutes(User));
 app.use("/posts", createCrudRoutes(Post));
 app.use("/categories", createCrudRoutes(Category));
 app.use("/comments", createCrudRoutes(Comment));
+app.use("/post-likes", createCrudRoutes(PostLike));
 
 app.use(
   "/api-docs",

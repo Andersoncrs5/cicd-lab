@@ -39,9 +39,31 @@ const commentSchema = new mongoose.Schema(
   options,
 );
 
+const postLikeSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    post: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Post",
+      required: true,
+    },
+  },
+  options,
+);
+
+postLikeSchema.index(
+  { user: 1, post: 1 },
+  { unique: true, name: "unique_user_post_like" },
+);
+
+const PostLike = mongoose.model("PostLike", postLikeSchema, "post_likes");
 const User = mongoose.model("User", userSchema);
 const Post = mongoose.model("Post", postSchema);
 const Category = mongoose.model("Category", categorySchema);
 const Comment = mongoose.model("Comment", commentSchema);
 
-module.exports = { User, Post, Category, Comment };
+module.exports = { User, Post, Category, Comment, PostLike };

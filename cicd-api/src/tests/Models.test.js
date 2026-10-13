@@ -124,3 +124,53 @@ describe("Timestamps", () => {
     });
   }
 });
+
+describe("PostLike", () => {
+  it("é válido com user e post", () => {
+    const postLike = new PostLike({
+      user: newId(),
+      post: newId(),
+    });
+
+    assert.equal(postLike.validateSync(), undefined);
+  });
+
+  it("exige user e post", () => {
+    const error = new PostLike({}).validateSync();
+
+    assert.ok(error);
+    assert.ok(error.errors.user);
+    assert.ok(error.errors.post);
+  });
+
+  it("rejeita user e post com ObjectIds inválidos", () => {
+    const error = new PostLike({
+      user: "id-invalido",
+      post: "outro-id-invalido",
+    }).validateSync();
+
+    assert.ok(error);
+    assert.equal(error.errors.user.name, "CastError");
+    assert.equal(error.errors.post.name, "CastError");
+  });
+
+  it("referencia User e Post", () => {
+    assert.equal(PostLike.schema.path("user").options.ref, "User");
+    assert.equal(PostLike.schema.path("post").options.ref, "Post");
+  });
+
+  it("declara índice composto único para user e post", () => {
+    const indexes = PostLike.schema.indexes();
+
+    const uniqueIndex = indexes.find(
+      ([fields, options]) =>
+        fields.user === 1 && fields.post === 1 && options.unique === true,
+    );
+
+    assert.ok(uniqueIndex);
+  });
+
+  it("usa a coleção post_likes", () => {
+    assert.equal(PostLike.collection.collectionName, "post_likes");
+  });
+});
