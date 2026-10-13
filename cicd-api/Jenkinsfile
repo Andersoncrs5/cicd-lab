@@ -163,6 +163,72 @@ pipeline {
                 }
             }
         }
+
+        stage('CI Summary') {
+            steps {
+                script {
+                    echo """
+                    ==================================================
+                              CI PIPELINE SUMMARY
+                    ==================================================
+                    Job:             ${env.JOB_NAME}
+                    Build number:    #${env.BUILD_NUMBER}
+                    Build result:    ${currentBuild.currentResult}
+                    Branch:          ${env.GIT_BRANCH ?: 'unknown'}
+                    Commit:          ${env.GIT_COMMIT ?: 'unknown'}
+                    Repository:      ${env.GIT_URL ?: 'unknown'}
+                    Build URL:       ${env.BUILD_URL ?: 'unknown'}
+
+                    Application:     ${env.APP_DIR}
+                    Docker image:    ${env.IMAGE_REPO}
+                    Versioned tag:   ${env.IMAGE_REPO}:${env.BUILD_NUMBER}
+                    Latest tag:      ${env.IMAGE_REPO}:latest
+                    ==================================================
+                    """
+                }
+
+                dir(env.APP_DIR) {
+                    sh '''
+                        set +e
+
+                        echo ""
+                        echo "========== NODE.JS =========="
+                        node --version
+                        npm --version
+
+                        echo ""
+                        echo "========== APPLICATION =========="
+                        node -p "'Name: ' + require('./package.json').name"
+                        node -p "'Version: ' + require('./package.json').version"
+
+                        echo ""
+                        echo "========== DOCKERFILE =========="
+                        if [ -f Dockerfile ]; then
+                            echo "Dockerfile encontrado."
+                            sha256sum Dockerfile 2>/dev/null || true
+                        else
+                            echo "ERRO: Dockerfile não encontrado!"
+                        fi
+
+                        echo ""
+                        echo "========== KUBERNETES MANIFEST =========="
+
+                        MANIFEST="$WORKSPACE/k8s/api/deployment.yaml"
+
+                        if [ -f "$MANIFEST" ]; then
+                            echo "Manifesto: $MANIFEST"
+                            grep -nE '^[[:space:]]*(image:|imagePullPolicy:)' "$MANIFEST"
+                        else
+                            echo "ERRO: manifesto não encontrado em $MANIFEST"
+                        fi
+
+                        echo ""
+                        echo "========== SUMMARY FINISHED =========="
+                    '''
+                }
+            }
+        }
+
     }
 
     post {
