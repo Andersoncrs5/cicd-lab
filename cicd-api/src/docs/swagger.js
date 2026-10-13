@@ -787,6 +787,60 @@ swaggerSpec.paths["/health/live"] = {
   },
 };
 
+swaggerSpec.paths["/health/database"] = {
+  get: {
+    tags: ["Health"],
+    summary: "Check MongoDB availability",
+    description:
+      "Executes a ping command against MongoDB. Returns HTTP 503 if the database is unavailable.",
+    operationId: "healthDatabase",
+    responses: {
+      200: {
+        description: "MongoDB is responding",
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                status: {
+                  type: "string",
+                  example: "UP",
+                },
+                dependency: {
+                  type: "string",
+                  example: "MongoDB",
+                },
+                database: {
+                  type: "string",
+                  example: "CONNECTED",
+                },
+                latencyMs: {
+                  type: "integer",
+                  minimum: 0,
+                  example: 3,
+                },
+              },
+            },
+          },
+        },
+      },
+      503: {
+        description: "MongoDB is unavailable",
+        content: {
+          "application/json": {
+            schema: {
+              $ref: "#/components/schemas/Error",
+            },
+            example: {
+              message: "MongoDB is unavailable",
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
 // Readiness probe.
 swaggerSpec.paths["/health/ready"] = {
   get: {

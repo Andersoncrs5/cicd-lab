@@ -37,6 +37,38 @@ app.get("/health/ready", (req, res) => {
   });
 });
 
+app.get("/health/database", async (req, res) => {
+  const startedAt = Date.now();
+
+  try {
+    if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
+      return res.status(503).json({
+        status: "DOWN",
+        dependency: "MongoDB",
+        database: "DISCONNECTED",
+      });
+    }
+
+    await mongoose.connection.db.admin().ping();
+
+    return res.status(200).json({
+      status: "UP",
+      dependency: "MongoDB",
+      database: "CONNECTED",
+      latencyMs: Date.now() - startedAt,
+    });
+  } catch (error) {
+    console.error("MongoDB health check failed:", error.message);
+
+    return res.status(503).json({
+      status: "DOWN",
+      dependency: "MongoDB",
+      database: "UNAVAILABLE",
+      latencyMs: Date.now() - startedAt,
+    });
+  }
+});
+
 // CRUD reutilizável para os models
 function createCrudRoutes(Model) {
   const router = express.Router();
