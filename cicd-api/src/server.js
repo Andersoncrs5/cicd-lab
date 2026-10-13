@@ -2,6 +2,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./docs/swagger");
+const os = require("os");
+
 require("dotenv").config();
 
 const { User, Post, Category, Comment, PostLike } = require("./models/models");
@@ -9,6 +11,34 @@ const { User, Post, Category, Comment, PostLike } = require("./models/models");
 const app = express();
 
 app.use(express.json());
+
+// System resource metrics
+app.get("/health/system", (req, res) => {
+  res.set("Cache-Control", "no-store");
+
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const usedMem = totalMem - freeMem;
+
+  res.status(200).json({
+    status: "UP",
+    system: {
+      hostname: os.hostname(),
+      platform: os.platform(),
+      release: os.release(),
+      architecture: os.arch(),
+      cpus: os.cpus().length,
+      loadAverage: os.loadavg(),
+      memory: {
+        totalBytes: totalMem,
+        freeBytes: freeMem,
+        usedBytes: usedMem,
+        usagePercentage: Number(((usedMem / totalMem) * 100).toFixed(2)),
+      },
+    },
+    checkedAt: new Date().toISOString(),
+  });
+});
 
 // Health check
 app.get("/health", (req, res) => {

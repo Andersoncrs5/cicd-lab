@@ -936,4 +936,174 @@ swaggerSpec.paths["/health/runtime"] = {
   },
 };
 
+swaggerSpec.paths["/health/dependencies"] = {
+  get: {
+    tags: ["Health"],
+    summary: "Check system dependencies status",
+    description:
+      "Returns the health status of all registered dependencies (such as MongoDB) along with latencies.",
+    operationId: "healthDependencies",
+    responses: {
+      200: {
+        description: "All dependencies are operational",
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                status: {
+                  type: "string",
+                  example: "UP",
+                },
+                dependencies: {
+                  type: "object",
+                  properties: {
+                    mongodb: {
+                      type: "object",
+                      properties: {
+                        status: { type: "string", example: "UP" },
+                        latencyMs: { type: "integer", example: 2 },
+                      },
+                    },
+                  },
+                },
+                checkedAt: {
+                  type: "string",
+                  format: "date-time",
+                  example: "2026-10-13T21:00:00.000Z",
+                },
+              },
+            },
+          },
+        },
+      },
+      503: {
+        description: "One or more dependencies are down",
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                status: { type: "string", example: "DEGRADED" },
+                dependencies: { type: "object" },
+                checkedAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+swaggerSpec.paths["/health/performance"] = {
+  get: {
+    tags: ["Health"],
+    summary: "Get API performance and request metrics",
+    description:
+      "Returns aggregated metrics including total requests processed, error counts, and average response times.",
+    operationId: "healthPerformance",
+    responses: {
+      200: {
+        description: "Performance metrics retrieved successfully",
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                status: {
+                  type: "string",
+                  example: "UP",
+                },
+                metrics: {
+                  type: "object",
+                  properties: {
+                    totalRequests: {
+                      type: "integer",
+                      example: 1540,
+                    },
+                    totalErrors: {
+                      type: "integer",
+                      example: 4,
+                    },
+                    averageResponseTimeMs: {
+                      type: "number",
+                      example: 12.45,
+                    },
+                  },
+                },
+                checkedAt: {
+                  type: "string",
+                  format: "date-time",
+                  example: "2026-10-13T21:00:00.000Z",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+swaggerSpec.paths["/health/system"] = {
+  get: {
+    tags: ["Health"],
+    summary: "Get host system metrics and resource usage",
+    description:
+      "Returns underlying container/host info including CPU count, load averages, and system memory usage statistics.",
+    operationId: "healthSystem",
+    responses: {
+      200: {
+        description: "System metrics retrieved successfully",
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                status: {
+                  type: "string",
+                  example: "UP",
+                },
+                system: {
+                  type: "object",
+                  properties: {
+                    hostname: {
+                      type: "string",
+                      example: "cicd-api-7474889cf5-f4rjs",
+                    },
+                    platform: { type: "string", example: "linux" },
+                    release: { type: "string", example: "6.5.0-generic" },
+                    architecture: { type: "string", example: "x64" },
+                    cpus: { type: "integer", example: 4 },
+                    loadAverage: {
+                      type: "array",
+                      items: { type: "number" },
+                      example: [0.15, 0.22, 0.18],
+                    },
+                    memory: {
+                      type: "object",
+                      properties: {
+                        totalBytes: { type: "integer", example: 4294967296 },
+                        freeBytes: { type: "integer", example: 2147483648 },
+                        usedBytes: { type: "integer", example: 2147483648 },
+                        usagePercentage: { type: "number", example: 50.0 },
+                      },
+                    },
+                  },
+                },
+                checkedAt: {
+                  type: "string",
+                  format: "date-time",
+                  example: "2026-10-13T21:00:00.000Z",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
 module.exports = swaggerSpec;
