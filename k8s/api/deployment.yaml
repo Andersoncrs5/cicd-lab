@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: andersoncrms/cicd-api:24
+          image: andersoncrms/cicd-api:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
