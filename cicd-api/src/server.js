@@ -131,6 +131,46 @@ app.get("/health/dependencies", async (req, res) => {
   }
 });
 
+const performanceMetrics = {
+  totalRequests: 0,
+  totalErrors: 0,
+  totalResponseTimeMs: 0,
+};
+
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+
+  performanceMetrics.totalRequests++;
+
+  res.on("finish", () => {
+    performanceMetrics.totalResponseTimeMs += Date.now() - startedAt;
+
+    if (res.statusCode >= 500) {
+      performanceMetrics.totalErrors++;
+    }
+  });
+
+  next();
+});
+
+app.get("/health/performance", (req, res) => {
+  const { totalRequests, totalErrors, totalResponseTimeMs } =
+    performanceMetrics;
+
+  res.status(200).json({
+    status: "UP",
+    metrics: {
+      totalRequests,
+      totalErrors,
+      averageResponseTimeMs:
+        totalRequests > 0
+          ? Number((totalResponseTimeMs / totalRequests).toFixed(2))
+          : 0,
+    },
+    checkedAt: new Date().toISOString(),
+  });
+});
+
 // CRUD reutilizável para os models
 function createCrudRoutes(Model) {
   const router = express.Router();
