@@ -18,6 +18,24 @@ app.get("/health", (req, res) => {
   });
 });
 
+app.get("/health/live", (req, res) => {
+  res.status(200).json({
+    status: "UP",
+    message: "API process is alive",
+    uptimeSeconds: Math.floor(process.uptime()),
+  });
+});
+
+// Readiness: confirms that the API can serve requests
+app.get("/health/ready", (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+
+  res.status(ready ? 200 : 503).json({
+    status: ready ? "READY" : "NOT_READY",
+    database: ready ? "CONNECTED" : "DISCONNECTED",
+  });
+});
+
 // CRUD reutilizável para os models
 function createCrudRoutes(Model) {
   const router = express.Router();
@@ -39,6 +57,28 @@ function createCrudRoutes(Model) {
       const documents = await Model.find();
 
       res.status(200).json(documents);
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
+  // CHECK WHETHER A RESOURCE EXISTS BY ID
+  router.get("/exists-by-id/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({
+          message: "Invalid ID",
+        });
+      }
+
+      const exists = await Model.exists({ _id: id });
+
+      res.status(200).json({
+        id,
+        exists: exists !== null,
+      });
     } catch (error) {
       handleError(error, res);
     }
@@ -142,6 +182,7 @@ function handleError(error, res) {
   });
 }
 
+// Swagger specification
 app.get("/api-docs/swagger.json", (req, res) => {
   res.json(swaggerSpec);
 });
@@ -153,6 +194,7 @@ app.use("/categories", createCrudRoutes(Category));
 app.use("/comments", createCrudRoutes(Comment));
 app.use("/post-likes", createCrudRoutes(PostLike));
 
+// Swagger UI
 app.use(
   "/api-docs",
   swaggerUi.serve,
