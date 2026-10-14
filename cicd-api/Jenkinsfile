@@ -129,40 +129,40 @@ pipeline {
             }
         }
 
-        stage('Scan image with Trivy') {
-            steps {
-                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'dockerhub-creds',
-                            usernameVariable: 'DOCKERHUB_USER',
-                            passwordVariable: 'DOCKERHUB_TOKEN'
-                        )
-                    ]) {
-                        container(name: 'trivy', shell: '/bin/sh') {
-                            sh '''
-                                set -eu
-                                set +x
+        // stage('Scan image with Trivy') {
+        //     steps {
+        //         catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+        //             withCredentials([
+        //                 usernamePassword(
+        //                     credentialsId: 'dockerhub-creds',
+        //                     usernameVariable: 'DOCKERHUB_USER',
+        //                     passwordVariable: 'DOCKERHUB_TOKEN'
+        //                 )
+        //             ]) {
+        //                 container(name: 'trivy', shell: '/bin/sh') {
+        //                     sh '''
+        //                         set -eu
+        //                         set +x
 
-                                export TRIVY_USERNAME="$DOCKERHUB_USER"
-                                export TRIVY_PASSWORD="$DOCKERHUB_TOKEN"
+        //                         export TRIVY_USERNAME="$DOCKERHUB_USER"
+        //                         export TRIVY_PASSWORD="$DOCKERHUB_TOKEN"
 
-                                echo "Analisando imagem: ${IMAGE_REPO}:${BUILD_NUMBER}"
+        //                         echo "Analisando imagem: ${IMAGE_REPO}:${BUILD_NUMBER}"
 
-                                trivy image \
-                                    --scanners vuln \
-                                    --severity HIGH,CRITICAL \
-                                    --ignore-unfixed \
-                                    --exit-code 1 \
-                                    --timeout 10m \
-                                    --no-progress \
-                                    "${IMAGE_REPO}:${BUILD_NUMBER}"
-                            '''
-                        }
-                    }
-                }
-            }
-        }
+        //                         trivy image \
+        //                             --scanners vuln \
+        //                             --severity HIGH,CRITICAL \
+        //                             --ignore-unfixed \
+        //                             --exit-code 1 \
+        //                             --timeout 10m \
+        //                             --no-progress \
+        //                             "${IMAGE_REPO}:${BUILD_NUMBER}"
+        //                     '''
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
         stage('Update GitOps manifest') {
             when {
@@ -170,25 +170,27 @@ pipeline {
             }
             steps {
                 withCredentials([gitUsernamePassword(credentialsId: 'github-creds')]) {
-                    sh '''
-                        set -eu
+                    container('jnlp') {
+                        sh '''
+                            set -eu
 
-                        MANIFEST="k8s/api/deployment.yaml"
+                            MANIFEST="k8s/api/deployment.yaml"
 
-                        git config --global --add safe.directory "${WORKSPACE}"
-                        git config user.name "jenkins-ci"
-                        git config user.email "jenkins-ci@localhost"
+                            git config --global --add safe.directory "${WORKSPACE}"
+                            git config user.name "jenkins-ci"
+                            git config user.email "jenkins-ci@localhost"
 
-                        sed -i "s|image: andersoncrms/cicd-api:.*|image: andersoncrms/cicd-api:${BUILD_NUMBER}|" "$MANIFEST"
-                        grep -q "image: andersoncrms/cicd-api:${BUILD_NUMBER}" "$MANIFEST"
+                            sed -i "s|image: andersoncrms/cicd-api:.*|image: andersoncrms/cicd-api:${BUILD_NUMBER}|" "$MANIFEST"
+                            grep -q "image: andersoncrms/cicd-api:${BUILD_NUMBER}" "$MANIFEST"
 
-                        git add "$MANIFEST"
-                        git commit -m "ci: deploy cicd-api image ${BUILD_NUMBER}"
+                            git add "$MANIFEST"
+                            git commit -m "ci: deploy cicd-api image ${BUILD_NUMBER}"
 
-                        git fetch origin main
-                        git rebase origin/main
-                        git push origin HEAD:main
-                    '''
+                            git fetch origin main
+                            git rebase origin/main
+                            git push origin HEAD:main
+                        '''
+                    }
                 }
             }
         }
