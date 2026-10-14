@@ -129,40 +129,40 @@ pipeline {
             }
         }
 
-        // stage('Scan image with Trivy') {
-        //     steps {
-        //         catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-        //             withCredentials([
-        //                 usernamePassword(
-        //                     credentialsId: 'dockerhub-creds',
-        //                     usernameVariable: 'DOCKERHUB_USER',
-        //                     passwordVariable: 'DOCKERHUB_TOKEN'
-        //                 )
-        //             ]) {
-        //                 container(name: 'trivy', shell: '/bin/sh') {
-        //                     sh '''
-        //                         set -eu
-        //                         set +x
+        stage('Scan image with Trivy') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'dockerhub-creds',
+                            usernameVariable: 'DOCKERHUB_USER',
+                            passwordVariable: 'DOCKERHUB_TOKEN'
+                        )
+                    ]) {
+                        container(name: 'trivy', shell: '/bin/sh') {
+                            sh '''
+                                set -eu
+                                set +x
 
-        //                         export TRIVY_USERNAME="$DOCKERHUB_USER"
-        //                         export TRIVY_PASSWORD="$DOCKERHUB_TOKEN"
+                                export TRIVY_USERNAME="$DOCKERHUB_USER"
+                                export TRIVY_PASSWORD="$DOCKERHUB_TOKEN"
 
-        //                         echo "Analisando imagem: ${IMAGE_REPO}:${BUILD_NUMBER}"
+                                echo "Analisando imagem: ${IMAGE_REPO}:${BUILD_NUMBER}"
 
-        //                         trivy image \
-        //                             --scanners vuln \
-        //                             --severity HIGH,CRITICAL \
-        //                             --ignore-unfixed \
-        //                             --exit-code 1 \
-        //                             --timeout 10m \
-        //                             --no-progress \
-        //                             "${IMAGE_REPO}:${BUILD_NUMBER}"
-        //                     '''
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+                                trivy image \
+                                    --scanners vuln \
+                                    --severity HIGH,CRITICAL \
+                                    --ignore-unfixed \
+                                    --exit-code 1 \
+                                    --timeout 10m \
+                                    --no-progress \
+                                    "${IMAGE_REPO}:${BUILD_NUMBER}"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
 
         stage('Update GitOps manifest') {
             when {
