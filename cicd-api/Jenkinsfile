@@ -164,6 +164,35 @@ pipeline {
             }
         }
 
+        stage('Update GitOps manifest') {
+            when {
+                expression { env.GIT_BRANCH == 'origin/main' }
+            }
+            steps {
+                withCredentials([gitUsernamePassword(credentialsId: 'github-creds')]) {
+                    sh '''
+                        set -eu
+
+                        MANIFEST="k8s/api/deployment.yaml"
+
+                        git config --global --add safe.directory "${WORKSPACE}"
+                        git config user.name "jenkins-ci"
+                        git config user.email "jenkins-ci@localhost"
+
+                        sed -i "s|image: andersoncrms/cicd-api:.*|image: andersoncrms/cicd-api:${BUILD_NUMBER}|" "$MANIFEST"
+                        grep -q "image: andersoncrms/cicd-api:${BUILD_NUMBER}" "$MANIFEST"
+
+                        git add "$MANIFEST"
+                        git commit -m "ci: deploy cicd-api image ${BUILD_NUMBER}"
+
+                        git fetch origin main
+                        git rebase origin/main
+                        git push origin HEAD:main
+                    '''
+                }
+            }
+        }
+
         stage('CI Summary') {
             steps {
                 script {
